@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AIFoundryAgent-ANF-SelfOps | Agentic Infrastructure</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;700&family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #09090b;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent-primary: #3b82f6; /* Blue */
+            --accent-secondary: #8b5cf6; /* Purple */
+            --accent-tertiary: #06b6d4; /* Cyan */
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --card-hover: rgba(255, 255, 255, 0.06);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            line-height: 1.6;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Abstract glowing background orbs */
+        .bg-orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(120px);
+            z-index: -1;
+            opacity: 0.5;
+            animation: float 20s infinite ease-in-out;
+        }
+        .orb-1 {
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, var(--accent-secondary) 0%, transparent 70%);
+            top: -100px;
+            left: -100px;
+        }
+        .orb-2 {
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, var(--accent-primary) 0%, transparent 70%);
+            bottom: 20%;
+            right: -200px;
+            animation-delay: -5s;
+        }
+        .orb-3 {
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, var(--accent-tertiary) 0%, transparent 70%);
+            top: 40%;
+            left: 20%;
+            animation-delay: -10s;
+            opacity: 0.3;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0) scale(1); }
+            50% { transform: translateY(-30px) scale(1.05); }
+        }
+
+        /* Container */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        /* Navigation */
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 24px 0;
+            border-bottom: 1px solid var(--glass-border);
+            backdrop-filter: blur(10px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .logo {
+            font-weight: 800;
+            font-size: 1.5rem;
+            letter-spacing: -0.05em;
+            background: linear-gradient(90deg, #fff, var(--text-muted));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 32px;
+        }
+
+        .nav-links a {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.95rem;
+            transition: color 0.3s ease;
+        }
+
+        .nav-links a:hover {
+            color: #fff;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            color: white;
+            padding: 10px 24px;
+            border-radius: 999px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4);
+            display: inline-block;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.6);
+        }
+
+        .btn-secondary {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            color: white;
+            padding: 10px 24px;
+            border-radius: 999px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: inline-block;
+        }
+
+        .btn-secondary:hover {
+            background: var(--card-hover);
+        }
+
+        /* Hero Section */
+        .hero {
+            padding: 120px 0;
+            text-align: center;
+            position: relative;
+        }
+
+        .pill {
+            display: inline-block;
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            color: var(--accent-tertiary);
+            padding: 6px 16px;
+            border-radius: 999px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            margin-bottom: 24px;
+            box-shadow: 0 0 20px rgba(6, 182, 212, 0.2);
+        }
+
+        .hero h1 {
+            font-size: 4.5rem;
+            font-weight: 800;
+            line-height: 1.1;
+            margin-bottom: 24px;
+            letter-spacing: -0.04em;
+        }
+
+        .gradient-text {
+            background: linear-gradient(135deg, #60a5fa, #c084fc, #38bdf8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-size: 200% auto;
+            animation: gradient-shine 5s linear infinite;
+        }
+
+        @keyframes gradient-shine {
+            to { background-position: 200% center; }
+        }
+
+        .hero p {
+            font-size: 1.25rem;
+            color: var(--text-muted);
+            max-width: 700px;
+            margin: 0 auto 40px auto;
+        }
+
+        .hero-actions {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+        }
+
+        /* Terminal Window */
+        .terminal-wrapper {
+            max-width: 800px;
+            margin: 60px auto 0 auto;
+            border-radius: 12px;
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05);
+            backdrop-filter: blur(20px);
+            overflow: hidden;
+            text-align: left;
+            transform: perspective(1000px) rotateX(2deg);
+            transition: transform 0.5s ease;
+        }
+        
+        .terminal-wrapper:hover {
+            transform: perspective(1000px) rotateX(0deg) translateY(-5px);
+        }
+
+        .terminal-header {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .terminal-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+        .dot-red { background: #ff5f56; }
+        .dot-yellow { background: #ffbd2e; }
+        .dot-green { background: #27c93f; }
+
+        .terminal-header-text {
+            color: var(--text-muted);
+            font-family: 'Inter', sans-serif;
+            font-size: 0.8rem;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .terminal-body {
+            padding: 24px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.9rem;
+            line-height: 1.7;
+            color: #a8b2d1;
+            height: 280px;
+            overflow-y: auto;
+        }
+
+        .cmd-prompt::before {
+            content: "> ";
+            color: var(--accent-tertiary);
+            font-weight: bold;
+        }
+
+        .cmd-user {
+            color: #fff;
+        }
+
+        .cmd-agent {
+            color: var(--accent-secondary);
+            margin-top: 12px;
+            display: block;
+        }
+
+        .cmd-output {
+            color: #64ffda;
+            margin-left: 16px;
+            display: block;
+        }
+        
+        /* Stats Strip */
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 24px;
+            padding: 40px 0;
+            border-top: 1px solid var(--glass-border);
+            border-bottom: 1px solid var(--glass-border);
+            margin: 60px 0;
+            text-align: center;
+            background: rgba(0,0,0,0.2);
+            backdrop-filter: blur(10px);
+        }
+        
+        .stat-item h3 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, white, var(--text-muted));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .stat-item p {
+            color: var(--accent-tertiary);
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* Features Section */
+        .features {
+            padding: 80px 0;
+        }
+
+        .section-header {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .section-header h2 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 16px;
+        }
+
+        .section-header p {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 32px;
+        }
+
+        .card {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 40px 32px;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-10px);
+            background: var(--card-hover);
+            border-color: rgba(255, 255, 255, 0.15);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+        }
+
+        .card:hover::before {
+            opacity: 1;
+        }
+
+        .card-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 12px;
+            background: rgba(59, 130, 246, 0.1);
+            color: var(--accent-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            margin-bottom: 24px;
+            border: 1px solid rgba(59, 130, 246, 0.2);
+        }
+        
+        .card:nth-child(2) .card-icon {
+            background: rgba(139, 92, 246, 0.1);
+            color: var(--accent-secondary);
+            border-color: rgba(139, 92, 246, 0.2);
+        }
+        
+        .card:nth-child(3) .card-icon {
+            background: rgba(6, 182, 212, 0.1);
+            color: var(--accent-tertiary);
+            border-color: rgba(6, 182, 212, 0.2);
+        }
+
+        .card h3 {
+            font-size: 1.5rem;
+            margin-bottom: 16px;
+            font-weight: 700;
+        }
+
+        .card p {
+            color: var(--text-muted);
+            font-size: 1rem;
+            line-height: 1.6;
+        }
+
+        /* Architecture Section */
+        .architecture {
+            padding: 80px 0 120px 0;
+        }
+        
+        .arch-graph {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 60px;
+            margin-top: 40px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .arch-flow {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: relative;
+            z-index: 2;
+        }
+        
+        .arch-node {
+            background: rgba(0,0,0,0.5);
+            border: 1px solid rgba(255,255,255,0.1);
+            padding: 30px;
+            border-radius: 16px;
+            text-align: center;
+            width: 28%;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            transition: border-color 0.3s ease;
+        }
+        
+        .arch-node:hover {
+            border-color: var(--accent-primary);
+        }
+        
+        .arch-node h4 {
+            font-size: 1.2rem;
+            margin-bottom: 12px;
+            color: #fff;
+        }
+        
+        .arch-node p {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+        
+        .arch-arrow {
+            flex: 1;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--accent-primary), transparent);
+            position: relative;
+            margin: 0 15px;
+        }
+        
+        .arch-arrow::after {
+            content: '→';
+            position: absolute;
+            right: 0;
+            top: -12px;
+            color: var(--accent-primary);
+            font-weight: bold;
+            font-size: 20px;
+        }
+        
+        .arch-arrow-label {
+            position: absolute;
+            top: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.8rem;
+            color: var(--accent-tertiary);
+            white-space: nowrap;
+            background: var(--bg-dark);
+            padding: 2px 8px;
+            border-radius: 4px;
+            border: 1px solid rgba(6, 182, 212, 0.3);
+        }
+
+        /* Footer */
+        footer {
+            border-top: 1px solid var(--glass-border);
+            padding: 60px 0;
+            text-align: center;
+            color: var(--text-muted);
+            background: #000;
+        }
+        
+        .footer-logo {
+            font-size: 1.25rem;
+            font-weight: 800;
+            color: #fff;
+            margin-bottom: 16px;
+        }
+        
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+        
+        .footer-links a {
+            color: var(--text-muted);
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+        
+        .footer-links a:hover {
+            color: var(--accent-tertiary);
+        }
+
+        /* Responsive */
+        @media (max-width: 992px) {
+            .hero h1 { font-size: 3.5rem; }
+            .grid-3 { grid-template-columns: repeat(2, 1fr); }
+            .stats-container { grid-template-columns: repeat(2, 1fr); gap: 40px; }
+            .arch-flow { flex-direction: column; gap: 40px; }
+            .arch-node { width: 100%; max-width: 400px; }
+            .arch-arrow { width: 2px; height: 40px; background: linear-gradient(180deg, transparent, var(--accent-primary), transparent); margin: 15px 0; }
+            .arch-arrow::after { content: '↓'; right: -8px; top: auto; bottom: 0; }
+            .arch-arrow-label { left: 30px; top: 10px; transform: none; }
+        }
+
+        @media (max-width: 768px) {
+            .nav-links { display: none; }
+            .hero h1 { font-size: 2.8rem; }
+            .grid-3 { grid-template-columns: 1fr; }
+            .hero-actions { flex-direction: column; }
+            .stats-container { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Background Effects -->
+    <div class="bg-orb orb-1"></div>
+    <div class="bg-orb orb-2"></div>
+    <div class="bg-orb orb-3"></div>
+
+    <nav>
+        <div class="container" style="display: flex; justify-content: space-between; width: 100%;">
+            <div class="logo">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--accent-tertiary);"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+                SelfOps
+            </div>
+            <div class="nav-links">
+                <a href="#features">Features</a>
+                <a href="#architecture">Architecture</a>
+                <a href="https://github.com/DwirefS/AIFoundryAgent-ANF-SelfOps">Documentation</a>
+            </div>
+            <div>
+                <a href="https://github.com/DwirefS/AIFoundryAgent-ANF-SelfOps" class="btn-secondary" style="padding: 8px 20px; font-size: 0.9rem;">
+                    GitHub
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <header class="hero container">
+        <div class="pill">Agentic Infrastructure</div>
+        <h1>Azure NetApp Files <br><span class="gradient-text">meets AI Foundry Agents</span></h1>
+        <p>A production-ready accelerator demonstrating how AI Agents autonomously manage Azure NetApp Files infrastructure via natural-language understanding and deterministic function calling.</p>
+        
+        <div class="hero-actions">
+            <a href="https://github.com/DwirefS/AIFoundryAgent-ANF-SelfOps#quick-start" class="btn-primary">View Quick Start</a>
+            <a href="#architecture" class="btn-secondary">Explore Architecture</a>
+        </div>
+
+        <div class="terminal-wrapper">
+            <div class="terminal-header">
+                <div class="terminal-dot dot-red"></div>
+                <div class="terminal-dot dot-yellow"></div>
+                <div class="terminal-dot dot-green"></div>
+                <div class="terminal-header-text">bash - selfops - 80x24</div>
+            </div>
+            <div class="terminal-body" id="typist">
+                <div class="cmd-line" style="margin-bottom: 20px;">
+                    <span class="cmd-prompt"></span><span class="cmd-user">Take a snapshot of trading-data called "pre-batch-2025"</span>
+                    <span class="cmd-agent" style="animation: fadeIn 0.5s 1s both;">Agent: Snapshot created successfully:</span>
+                    <span class="cmd-output" style="animation: fadeIn 0.5s 1.5s both;">- Name: pre-batch-2025</span>
+                    <span class="cmd-output" style="animation: fadeIn 0.5s 1.7s both;">- Volume: trading-data</span>
+                    <span class="cmd-output" style="animation: fadeIn 0.5s 1.9s both;">- Status: Provisioning Succeeded</span>
+                </div>
+                <div class="cmd-line" style="animation: fadeIn 0.5s 3.5s both;">
+                    <span class="cmd-prompt"></span><span class="cmd-user">Resize risk-analytics to 3 TiB</span>
+                    <span class="cmd-agent" style="animation: fadeIn 0.5s 4.5s both;">Agent: Volume resized successfully:</span>
+                    <span class="cmd-output" style="animation: fadeIn 0.5s 5s both;">- Previous Size: 2 TiB</span>
+                    <span class="cmd-output" style="animation: fadeIn 0.5s 5.2s both;">- New Size: 3 TiB (3,298,534,883,328 bytes)</span>
+                    <span class="cmd-output" style="animation: fadeIn 0.5s 5.4s both;">Note: ANF volume resize is online — no downtime required.</span>
+                </div>
+                <div class="cmd-line" style="animation: fadeIn 0.5s 7s both; padding-top: 20px;">
+                    <span class="cmd-prompt blink">_</span>
+                </div>
+            </div>
+        </div>
+    </header>
+    
+    <div class="container stats-container">
+        <div class="stat-item">
+            <h3>10</h3>
+            <p>ANF Tools</p>
+        </div>
+        <div class="stat-item">
+            <h3>97</h3>
+            <p>Unit Tests</p>
+        </div>
+        <div class="stat-item">
+            <h3>GA</h3>
+            <p>Azure AI Agents</p>
+        </div>
+        <div class="stat-item">
+            <h3>IAC</h3>
+            <p>Bicep Included</p>
+        </div>
+    </div>
+
+    <section id="features" class="features container">
+        <div class="section-header">
+            <h2>The SelfOps Frontier</h2>
+            <p>We are entering an era where applications manage their own infrastructure. Stop writing imperative scripts; define intent, and let the agent manage the control plane.</p>
+        </div>
+        
+        <div class="grid-3">
+            <div class="card">
+                <div class="card-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                </div>
+                <h3>Deterministic Execution</h3>
+                <p>Built with robust tool executors, structured Pydantic input validation, circuit breakers, and exponential backoff retry logic. It doesn't guess; it executes perfectly.</p>
+            </div>
+            
+            <div class="card">
+                <div class="card-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>
+                </div>
+                <h3>Sub-Millisecond Data</h3>
+                <p>Azure NetApp Files provides the enterprise-grade NAS foundation. Create instantaneous, zero-cost redirect-on-write snapshots for massive datasets right before pipeline runs.</p>
+            </div>
+            
+            <div class="card">
+                <div class="card-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                </div>
+                <h3>Complete IaC</h3>
+                <p>Includes complete Bicep templates for deploying Azure NetApp Files, Azure AI Foundry Hubs, VNet peering, delegated subnets, and Managed Identities with least-privilege RBAC.</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="architecture" class="architecture container">
+        <div class="section-header">
+            <h2>How it Works</h2>
+            <p>From intent to execution. A seamless, secure pipeline connecting natural language to Azure REST APIs.</p>
+        </div>
+        
+        <div class="arch-graph">
+            <div class="arch-flow">
+                <div class="arch-node">
+                    <h4>1. AI Foundry Agent</h4>
+                    <p>GPT-4o agent analyzes user intent, manages conversation state, and emits `requires_action` function calls.</p>
+                </div>
+                
+                <div class="arch-arrow">
+                    <div class="arch-arrow-label">Function Name + JSON Args</div>
+                </div>
+                
+                <div class="arch-node">
+                    <h4>2. Tool Executor</h4>
+                    <p>Python dispatcher validates inputs via Pydantic, checks boundaries, and triggers the configured client method.</p>
+                </div>
+                
+                <div class="arch-arrow">
+                    <div class="arch-arrow-label">Azure SDK (REST API)</div>
+                </div>
+                
+                <div class="arch-node">
+                    <h4>3. Azure NetApp Files</h4>
+                    <p>Management Control Plane processes the snapshot, resize, or volume query with Managed Identity Auth.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <div class="container">
+            <div class="footer-logo">AIFoundryAgent-ANF-SelfOps</div>
+            <div class="footer-links">
+                <a href="https://github.com/DwirefS/AIFoundryAgent-ANF-SelfOps">GitHub Repository</a>
+                <a href="https://learn.microsoft.com/en-us/azure/azure-netapp-files/" target="_blank">Azure NetApp Files</a>
+                <a href="https://learn.microsoft.com/en-us/azure/ai-studio/" target="_blank">Azure AI Foundry</a>
+            </div>
+            <p>&copy; 2026. MIT License. Enterprise-ready, open source pattern.</p>
+        </div>
+    </footer>
+
+    <style>
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .blink { animation: blink-caret .75s step-end infinite; }
+        @keyframes blink-caret { from, to { opacity: 0; } 50% { opacity: 1; } }
+    </style>
+</body>
+</html>
