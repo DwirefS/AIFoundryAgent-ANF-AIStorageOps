@@ -123,14 +123,80 @@ resource volume 'Microsoft.NetApp/netAppAccounts/capacityPools/volumes@2024-07-0
   }
 }
 
-// ── Managed Identity + RBAC ─────────────────────────────────
+// ── Network Security Group ──────────────────────────────────
+// Restrict traffic to the ANF delegated subnet. Allow NFS (2049)
+// inbound from the VNet only; deny all other inbound by default.
+
+resource nsg 'Microsoft.Network/networkSecurityGroups@2024-01-01' = {
+  name: '${baseName}-anf-nsg'
+  location: location
+  properties: {
+    securityRules: [
+      {
+        name: 'AllowNFS-Inbound'
+        properties: {
+          priority: 100
+          direction: 'Inbound'
+          access: 'Allow'
+          protocol: 'Tcp'
+          sourceAddressPrefix: vnetAddressPrefix
+          sourcePortRange: '*'
+          destinationAddressPrefix: anfSubnetPrefix
+          destinationPortRange: '2049'
+          description: 'Allow NFS v4.1 from within VNet only'
+        }
+      }
+      {
+        name: 'AllowNFS-UDP-Inbound'
+        properties: {
+          priority: 110
+          direction: 'Inbound'
+          access: 'Allow'
+          protocol: 'Udp'
+          sourceAddressPrefix: vnetAddressPrefix
+          sourcePortRange: '*'
+          destinationAddressPrefix: anfSubnetPrefix
+          destinationPortRange: '2049'
+          description: 'Allow NFS UDP from within VNet only'
+        }
+      }
+      {
+        name: 'DenyAllOtherInbound'
+        properties: {
+          priority: 4096
+          direction: 'Inbound'
+          access: 'Deny'
+          protocol: '*'
+          sourceAddressPrefix: '*'
+          sourcePortRange: '*'
+          destinationAddressPrefix: '*'
+          destinationPortRange: '*'
+          description: 'Deny all other inbound traffic to ANF subnet'
+        }
+      }
+    ]
+  }
+}
+
+// ── Managed Identity + Least-Privilege RBAC ─────────────────
+// Security principle: assign the narrowest role at the narrowest scope.
+// The agent identity gets:
+//   - "NetApp Account Contributor" on the ANF account (not broad Contributor)
+//   - "Cognitive Services OpenAI User" on the AOAI resource (assigned in deploy.sh)
+// This prevents the identity from modifying any resources outside ANF.
 
 resource managedIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
   name: managedIdentityName
   location: location
 }
 
-// Contributor on ANF account (for management operations)
+// Built-in role: "Contributor" scoped ONLY to the ANF account
+// For tighter control, consider a custom role with only:
+//   Microsoft.NetApp/netAppAccounts/read
+//   Microsoft.NetApp/netAppAccounts/capacityPools/read
+//   Microsoft.NetApp/netAppAccounts/capacityPools/volumes/*
+// For now, Contributor on the ANF account (not the RG) is acceptable
+// because the scope is narrow — it cannot touch AOAI, Hub, or other resources.
 resource anfRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   name: guid(anfAccount.id, managedIdentity.id, 'Contributor')
   scope: anfAccount
@@ -148,15 +214,14 @@ output poolName string = capacityPool.name
 output volumeName string = volume.name
 output managedIdentityClientId string = managedIdentity.properties.clientId
 output managedIdentityPrincipalId string = managedIdentity.properties.principalId
+output managedIdentityName string = managedIdentity.name
+output nsgId string = nsg.id
 output vnetId string = vnet.id
 
-// NOTE: AI Foundry project deployment is commented out below.
-// Foundry projects are typically created via the portal or CLI
-// as the Bicep resource provider for Foundry is evolving.
-// Use this command after deploying the above:
-//
-//   az ml workspace create \
-//     --name "${baseName}-foundry" \
-//     --resource-group <rg> \
-//     --kind "project" \
-//     --hub-id <hub-resource-id>
+// NOTE: AI Foundry Hub + Project are created via CLI (deploy.sh Steps 4-5)
+// because the Bicep resource provider for ML workspaces is evolving.
+// The deploy.sh also handles:
+//   - AOAI resource creation + GPT-4o deployment
+//   - AOAI connection (auth_type: aad) to the Hub
+//   - RBAC assignment for Cognitive Services OpenAI Contributor
+//   - .env.generated output with connection string

@@ -20,7 +20,15 @@ from azure.identity import DefaultAzureCredential
 from azure.mgmt.netapp import NetAppManagementClient
 from azure.mgmt.netapp.models import Snapshot, VolumePatch
 
-from .models import AccountInfo, CapacityPoolInfo, OperationResult, SnapshotInfo, VolumeInfo
+from .models import (
+    AccountInfo,
+    CapacityPoolInfo,
+    OperationResult,
+    QuotaInfo,
+    SnapshotInfo,
+    VolumeHealthInfo,
+    VolumeInfo,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -30,10 +38,10 @@ class ANFClient:
     High-level wrapper around the Azure NetApp Files Management SDK.
 
     Provides the operations exposed as function tools to the Foundry agent:
-      - list_volumes, get_volume
-      - create_snapshot, list_snapshots, delete_snapshot
+      - list_capacity_pools, list_volumes, get_volume, create_volume, delete_volume
+      - create_snapshot, list_snapshots, delete_snapshot, revert_volume
       - resize_volume
-      - get_account_info
+      - get_account_info, get_quota_limits, check_volume_health
     """
 
     def __init__(
@@ -459,3 +467,245 @@ class ANFClient:
             provisioning_state=account.provisioning_state or "Unknown",
             active_directories=ad_count,
         )
+
+    # ── Volume Creation ────────────────────────────────────────────────
+
+    def create_volume(
+        self,
+        volume_name: str,
+        size_gib: int,
+        pool_name: Optional[str] = None,
+        protocol: str = "NFSv4.1",
+    ) -> OperationResult:
+        """
+        Create a new Azure NetApp Files volume in a capacity pool.
+
+        ANF volumes are provisioned within a capacity pool and inherit its
+        service level. The volume gets a dedicated NFS/SMB endpoint on the
+        ANF-delegated subnet.
+
+        Args:
+            volume_name: Name for the new volume (must be unique in the pool).
+            size_gib: Volume quota in GiB (minimum 100 GiB).
+            pool_name: Target capacity pool. Uses default pool if not specified.
+            protocol: Protocol type — "NFSv4.1" (default), "NFSv3", or "CIFS".
+
+        Returns:
+            OperationResult indicating success or failure.
+        """
+        pool = pool_name or self.default_pool_name
+        logger.info("Creating volume %s (%d GiB) in pool %s", volume_name, size_gib, pool)
+
+        if size_gib < 100:
+            return OperationResult(
+                success=False,
+                operation="create_volume",
+                resource_name=volume_name,
+                details="",
+                error="Volume size must be at least 100 GiB.",
+            )
+
+        # Resolve the subnet ID from an existing volume in the pool
+        # (ANF volumes must be on the same delegated subnet)
+        try:
+            existing_volumes = list(
+                self._client.volumes.list(
+                    resource_group_name=self.resource_group,
+                    account_name=self.account_name,
+                    pool_name=pool,
+                )
+            )
+            if not existing_volumes:
+                return OperationResult(
+                    success=False,
+                    operation="create_volume",
+                    resource_name=volume_name,
+                    details="",
+                    error=f"No existing volumes in pool '{pool}' to derive subnet ID. "
+                    "Create the first volume via Azure Portal or Bicep.",
+                )
+            subnet_id = existing_volumes[0].subnet_id
+
+            # Map protocol string to protocol types array
+            protocol_map = {
+                "NFSv4.1": ["NFSv4.1"],
+                "NFSv3": ["NFSv3"],
+                "CIFS": ["CIFS"],
+            }
+            protocol_types = protocol_map.get(protocol, ["NFSv4.1"])
+
+            new_size_bytes = size_gib * (1024**3)
+
+            # Use raw dict to avoid DPG serialization issues (same pattern as resize_volume)
+            poller = self._client.volumes.begin_create_or_update(
+                resource_group_name=self.resource_group,
+                account_name=self.account_name,
+                pool_name=pool,
+                volume_name=volume_name,
+                body={
+                    "location": existing_volumes[0].location,
+                    "properties": {
+                        "creationToken": volume_name,
+                        "usageThreshold": new_size_bytes,
+                        "subnetId": subnet_id,
+                        "protocolTypes": protocol_types,
+                        "snapshotDirectoryVisible": True,
+                        "exportPolicy": {
+                            "rules": [
+                                {
+                                    "ruleIndex": 1,
+                                    "unixReadOnly": False,
+                                    "unixReadWrite": True,
+                                    "allowedClients": "10.0.0.0/16",
+                                    "nfsv41": "NFSv4.1" in protocol_types,
+                                    "nfsv3": "NFSv3" in protocol_types,
+                                }
+                            ]
+                        },
+                    },
+                },
+            )
+            poller.result()  # Wait for completion
+
+            return OperationResult(
+                success=True,
+                operation="create_volume",
+                resource_name=volume_name,
+                details=(
+                    f"Volume '{volume_name}' created in pool '{pool}' "
+                    f"with {size_gib} GiB capacity, {protocol} protocol."
+                ),
+            )
+        except Exception as e:
+            logger.error("create_volume failed: %s", str(e))
+            return OperationResult(
+                success=False,
+                operation="create_volume",
+                resource_name=volume_name,
+                details="",
+                error=str(e),
+            )
+
+    # ── Monitoring & Health ────────────────────────────────────────────
+
+    def check_volume_health(
+        self,
+        volume_name: str,
+        pool_name: Optional[str] = None,
+    ) -> VolumeHealthInfo:
+        """
+        Get an aggregated health and utilization summary for a volume.
+
+        Combines volume metadata with snapshot inventory to provide a
+        single-call health check useful for operational monitoring.
+
+        Args:
+            volume_name: Name of the ANF volume to inspect.
+            pool_name: Capacity pool name. Uses default if not specified.
+
+        Returns:
+            VolumeHealthInfo with volume details and snapshot summary.
+        """
+        pool = pool_name or self.default_pool_name
+        logger.info("Checking health of volume %s in pool %s", volume_name, pool)
+
+        # Get volume details
+        volume = self._client.volumes.get(
+            resource_group_name=self.resource_group,
+            account_name=self.account_name,
+            pool_name=pool,
+            volume_name=volume_name,
+        )
+
+        # Get snapshots for this volume
+        snapshots = list(
+            self._client.snapshots.list(
+                resource_group_name=self.resource_group,
+                account_name=self.account_name,
+                pool_name=pool,
+                volume_name=volume_name,
+            )
+        )
+
+        # Find the latest snapshot
+        latest_snapshot = None
+        if snapshots:
+            snapshots_with_dates = [s for s in snapshots if s.created]
+            if snapshots_with_dates:
+                latest_snapshot = max(snapshots_with_dates, key=lambda s: s.created)
+
+        # Count export policy rules
+        export_rules = 0
+        if volume.export_policy and volume.export_policy.rules:
+            export_rules = len(volume.export_policy.rules)
+
+        return VolumeHealthInfo(
+            volume_name=volume_name,
+            pool_name=pool,
+            provisioning_state=volume.provisioning_state or "Unknown",
+            size_gib=round((volume.usage_threshold or 0) / (1024**3), 2),
+            service_level=volume.service_level or "Unknown",
+            throughput_mibps=volume.actual_throughput_mibps,
+            protocol_types=list(volume.protocol_types or []),
+            snapshot_count=len(snapshots),
+            latest_snapshot_name=(
+                latest_snapshot.name.split("/")[-1] if latest_snapshot else None
+            ),
+            latest_snapshot_date=latest_snapshot.created if latest_snapshot else None,
+            export_policy_client_count=export_rules,
+            snapshot_directory_visible=volume.snapshot_directory_visible,
+        )
+
+    def get_quota_limits(self) -> list[QuotaInfo]:
+        """
+        Get ANF quota limits for the account's region.
+
+        Queries the subscription-level quota limits for Azure NetApp Files
+        in the region where the account is deployed. Useful for capacity
+        planning and ensuring operations won't exceed quotas.
+
+        Returns:
+            List of QuotaInfo objects describing regional limits.
+        """
+        logger.info("Getting quota limits for account %s", self.account_name)
+
+        # First, get the account to determine its location
+        account = self._client.accounts.get(
+            resource_group_name=self.resource_group,
+            account_name=self.account_name,
+        )
+        location = account.location
+
+        # Query quota limits for this region
+        try:
+            quotas = list(
+                self._client.net_app_resource_quota_limits.list(
+                    location=location,
+                )
+            )
+
+            result = []
+            for q in quotas:
+                result.append(
+                    QuotaInfo(
+                        region=location,
+                        resource_type=q.name or "Unknown",
+                        current_value=q.current_value or 0,
+                        limit=q.default or 0,
+                        unit=q.unit or "Count",
+                    )
+                )
+            return result
+        except Exception as e:
+            logger.error("get_quota_limits failed: %s", str(e))
+            # Return a single error entry rather than raising,
+            # so the agent can report the issue gracefully
+            return [
+                QuotaInfo(
+                    region=location,
+                    resource_type="error",
+                    current_value=0,
+                    limit=0,
+                    unit=str(e),
+                )
+            ]

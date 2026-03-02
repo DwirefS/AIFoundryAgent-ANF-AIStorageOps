@@ -108,9 +108,12 @@ class CapacityPoolInfo(BaseModel):
     size_in_bytes: int = Field(description="Provisioned size in bytes")
     size_in_gib: float = Field(description="Provisioned size in GiB")
     provisioning_state: str = Field(description="Current provisioning state")
+    utilization_percent: Optional[float] = Field(
+        None, description="Pool utilization as percentage of provisioned capacity"
+    )
 
     @classmethod
-    def from_sdk(cls, pool, resource_group: str) -> CapacityPoolInfo:
+    def from_sdk(cls, pool, resource_group: str, utilization: Optional[float] = None) -> CapacityPoolInfo:
         """Create CapacityPoolInfo from azure-mgmt-netapp CapacityPool object."""
         return cls(
             name=pool.name.split("/")[-1] if "/" in pool.name else pool.name,
@@ -120,4 +123,36 @@ class CapacityPoolInfo(BaseModel):
             size_in_bytes=pool.size or 0,
             size_in_gib=round((pool.size or 0) / (1024**3), 2),
             provisioning_state=pool.provisioning_state or "Unknown",
+            utilization_percent=utilization,
         )
+
+
+class QuotaInfo(BaseModel):
+    """Represents ANF regional quota limits and current usage."""
+
+    region: str = Field(description="Azure region")
+    resource_type: str = Field(description="Resource type being queried")
+    current_value: int = Field(description="Current usage count")
+    limit: int = Field(description="Maximum allowed count")
+    unit: str = Field(default="Count", description="Unit of measure")
+
+
+class VolumeHealthInfo(BaseModel):
+    """Aggregated health and utilization summary for a volume."""
+
+    volume_name: str = Field(description="Volume name")
+    pool_name: str = Field(description="Capacity pool name")
+    provisioning_state: str = Field(description="Current provisioning state")
+    size_gib: float = Field(description="Provisioned size in GiB")
+    service_level: str = Field(description="Service level")
+    throughput_mibps: Optional[float] = Field(None, description="Actual throughput in MiB/s")
+    protocol_types: list[str] = Field(default_factory=list, description="Enabled protocols")
+    snapshot_count: int = Field(description="Number of existing snapshots")
+    latest_snapshot_name: Optional[str] = Field(None, description="Most recent snapshot name")
+    latest_snapshot_date: Optional[datetime] = Field(None, description="Most recent snapshot timestamp")
+    export_policy_client_count: int = Field(
+        default=0, description="Number of export policy rules configured"
+    )
+    snapshot_directory_visible: Optional[bool] = Field(
+        None, description="Whether .snapshot directory is visible to clients"
+    )

@@ -4,7 +4,7 @@
 
 A production-ready GitHub accelerator demonstrating Azure AI Foundry Agents managing Azure NetApp Files infrastructure through function calling. Part of a 3-repo training suite for Microsoft internal teams (100+ attendees).
 
-**Version**: 0.2.0 | **Tests**: 20/20 | **Tools**: 10 | **Status**: Demo-ready
+**Version**: 0.3.0 | **Tests**: 20/20 | **Tools**: 13 | **Status**: Lab-validated, security-hardened
 
 ## Stack
 

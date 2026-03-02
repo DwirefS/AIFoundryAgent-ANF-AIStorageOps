@@ -21,6 +21,7 @@ FUNCTION_REGISTRY = {
     "list_capacity_pools",
     "list_volumes",
     "get_volume",
+    "create_volume",
     "delete_volume",
     "create_snapshot",
     "list_snapshots",
@@ -28,6 +29,8 @@ FUNCTION_REGISTRY = {
     "revert_volume",
     "resize_volume",
     "get_account_info",
+    "check_volume_health",
+    "get_quota_limits",
 }
 
 
@@ -139,6 +142,23 @@ class ToolExecutor:
 
         elif function_name == "get_account_info":
             return self.anf_client.get_account_info()
+
+        elif function_name == "create_volume":
+            return self.anf_client.create_volume(
+                volume_name=args["volume_name"],
+                size_gib=args["size_gib"],
+                pool_name=args.get("pool_name"),
+                protocol=args.get("protocol", "NFSv4.1"),
+            )
+
+        elif function_name == "check_volume_health":
+            return self.anf_client.check_volume_health(
+                volume_name=args["volume_name"],
+                pool_name=args.get("pool_name"),
+            )
+
+        elif function_name == "get_quota_limits":
+            return self.anf_client.get_quota_limits()
 
         else:
             raise ValueError(f"Unhandled function: {function_name}")
