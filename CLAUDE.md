@@ -4,7 +4,7 @@
 
 A production-ready GitHub accelerator demonstrating Azure AI Foundry Agents managing Azure NetApp Files infrastructure through function calling. Part of a 3-repo training suite for Microsoft internal teams (100+ attendees).
 
-**Version**: 0.2.0 | **Tests**: 97/97 | **Tools**: 10 | **Status**: Demo-ready
+**Version**: 0.2.0 | **Tests**: 20/20 | **Tools**: 7 | **Status**: Demo-ready
 
 ## Stack
 
@@ -12,7 +12,7 @@ A production-ready GitHub accelerator demonstrating Azure AI Foundry Agents mana
 - **Package manager**: pip with pyproject.toml (PEP 621)
 - **Linter/formatter**: ruff
 - **Type checker**: mypy (strict mode)
-- **Test framework**: pytest with pytest-asyncio (97 unit tests)
+- **Test framework**: pytest with pytest-asyncio (20 unit tests)
 - **Azure SDKs**: azure-ai-projects 1.0.0 (GA), azure-ai-agents >=1.1.0 (GA), azure-mgmt-netapp >=14.0.0
 - **Auth**: azure-identity (DefaultAzureCredential)
 - **Resilience**: tenacity (retry with backoff), custom circuit breaker
@@ -23,31 +23,24 @@ A production-ready GitHub accelerator demonstrating Azure AI Foundry Agents mana
 
 ## Project Structure
 
-```
+```text
 src/
 ├── main.py              # Entry point — interactive CLI + signal handlers
 ├── config/              # Settings via pydantic-settings, validators, .env loading
 ├── anf_client/          # azure-mgmt-netapp SDK wrapper
-│   ├── client.py        # ANFClient (10 methods, all with retry + circuit breaker)
+│   ├── client.py        # ANFClient (7 methods, all with retry + circuit breaker)
 │   └── models.py        # Pydantic models: VolumeInfo, SnapshotInfo, AccountInfo, etc.
 ├── agent/               # Foundry Agent lifecycle
 │   ├── foundry_agent.py # Agent setup, thread/run loop, function call handling, 300s timeout
 │   └── instructions.py  # System prompt and agent name constants
 ├── tools/               # Function calling layer
-│   ├── definitions.py   # FunctionTool JSON schemas (10 tools)
+│   ├── definitions.py   # FunctionTool JSON schemas (7 tools)
 │   └── executor.py      # Dispatch + arg validation + destructive ops gate
-├── observability/       # Structured logging (structlog JSON/text)
-└── middleware/           # Retry with exponential backoff + circuit breaker
-    ├── retry.py         # @with_retry() decorator (tenacity, configurable attempts)
-    ├── circuit_breaker.py # Thread-safe CLOSED→OPEN→HALF_OPEN state machine
-    └── __init__.py      # Re-exports
 scripts/
-├── deploy.sh            # 8-stage one-command deployment
-├── validate.sh          # 9 automated environment checks
-├── smoke-test.sh        # Tests all 10 tools against live Azure
+├── deploy.sh            # End-to-end Bicep + Foundry CLI deployment
 └── teardown.sh          # Safe resource group deletion
 infra/                   # Bicep IaC (VNet, NSG, ANF, Key Vault, MI, RBAC)
-tests/                   # 97 unit tests (7 test files + conftest)
+tests/                   # 20 unit tests (1 test file)
 docs/                    # DEPLOYMENT.md, ARCHITECTURE.md, RBAC.md
 ```
 
@@ -64,7 +57,7 @@ ruff format src/ tests/
 # Type check
 mypy src/
 
-# Test (unit only, no Azure creds needed — 97 tests)
+# Test (unit only, no Azure creds needed — 20 tests)
 pytest tests/ -v -m "not integration"
 
 # Run the agent
@@ -72,12 +65,6 @@ python -m src.main
 
 # Deploy (one command)
 bash scripts/deploy.sh <sub-id> <resource-group> <location>
-
-# Validate environment
-bash scripts/validate.sh
-
-# Smoke test all 10 tools
-bash scripts/smoke-test.sh
 
 # Teardown
 bash scripts/teardown.sh <resource-group>
@@ -110,6 +97,7 @@ docker build -t anf-foundry-selfops .
 ## Progressive Disclosure
 
 Before working on a specific area, read the relevant doc:
+
 - `docs/ARCHITECTURE.md` — Module map, data flow, middleware integration
 - `docs/DEPLOYMENT.md` — Full deployment guide (14 sections)
 - `docs/RBAC.md` — RBAC, managed identity, secret handling

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "anf-foundry-selfops"
-version = "0.1.0"
+version = "0.2.0"
 description = "Azure AI Foundry Agents managing Azure NetApp Files — Agentic Infrastructure SelfOps"
 readme = "README.md"
 license = {text = "MIT"}
